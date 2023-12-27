@@ -20,6 +20,7 @@ Obtains coordinates and additional information (like surrounding regional struct
 
 * Api Key Authentication (headerApiKey):
 * Api Key Authentication (queryApiKey):
+
 ```python
 import time
 import os
@@ -78,6 +79,7 @@ with mapy_cz_geocode.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query** | **str**| Geographic entity name to resolve | [optional] [default to &#39;&#39;]
@@ -103,6 +105,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Request succeeded |  -  |
@@ -121,6 +124,7 @@ Reverse geocode - get regional entities for given location coordinates. Rate lim
 
 * Api Key Authentication (headerApiKey):
 * Api Key Authentication (queryApiKey):
+
 ```python
 import time
 import os
@@ -173,6 +177,7 @@ with mapy_cz_geocode.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **lon** | **float**| Location longitude in degrees (decimal point is \&quot;.\&quot;). Positive means east, negative west. | 
@@ -193,6 +198,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Request succeeded |  -  |
@@ -212,6 +218,7 @@ Suggest works similarly to geocoding, but it accounts for incomplete queries, so
 
 * Api Key Authentication (headerApiKey):
 * Api Key Authentication (queryApiKey):
+
 ```python
 import time
 import os
@@ -270,6 +277,7 @@ with mapy_cz_geocode.ApiClient(configuration) as api_client:
 
 ### Parameters
 
+
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **query** | **str**| Geographic entity name to resolve | [optional] [default to &#39;&#39;]
@@ -295,6 +303,7 @@ Name | Type | Description  | Notes
  - **Accept**: application/json
 
 ### HTTP response details
+
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Request succeeded |  -  |

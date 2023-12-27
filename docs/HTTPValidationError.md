@@ -2,6 +2,7 @@
 
 
 ## Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **detail** | [**List[ValidationError]**](ValidationError.md) |  | [optional] 

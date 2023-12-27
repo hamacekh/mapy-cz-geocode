@@ -12,16 +12,22 @@
 """  # noqa: E501
 
 
-import re  # noqa: F401
 import io
 import warnings
 
-from pydantic import validate_arguments, ValidationError
+from pydantic import validate_call, Field, StrictFloat, StrictStr, StrictInt
+from typing import Dict, List, Optional, Tuple, Union, Any
 
+try:
+    from typing import Annotated
+except ImportError:
+    from typing_extensions import Annotated
+
+from pydantic import Field
 from typing_extensions import Annotated
-from pydantic import Field, StrictFloat, StrictInt, StrictStr, confloat, conint, conlist, constr, validator
+from pydantic import StrictFloat, StrictInt, StrictStr, field_validator
 
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
 
 from mapy_cz_geocode.models.geocode_entity_type import GeocodeEntityType
 from mapy_cz_geocode.models.geocode_result import GeocodeResult
@@ -29,10 +35,7 @@ from mapy_cz_geocode.models.rgeocode_result import RgeocodeResult
 
 from mapy_cz_geocode.api_client import ApiClient
 from mapy_cz_geocode.api_response import ApiResponse
-from mapy_cz_geocode.exceptions import (  # noqa: F401
-    ApiTypeError,
-    ApiValueError
-)
+from mapy_cz_geocode.rest import RESTResponseType
 
 
 class GeocodingApi:
@@ -47,60 +50,34 @@ class GeocodingApi:
             api_client = ApiClient.get_default()
         self.api_client = api_client
 
-    @validate_arguments
-    def api_geocode_v1_geocode_get(self, query : Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None, lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, limit : Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None, type : Annotated[Optional[conlist(GeocodeEntityType)], Field(description="Return selected entity types only")] = None, locality : Annotated[Optional[conlist(constr(strict=True))], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None, prefer_b_box : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=4, min_items=4)], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None, prefer_near : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=2, min_items=2)], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None, prefer_near_precision : Annotated[Optional[Union[confloat(ge=0.0, strict=True), conint(ge=0.0, strict=True)]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None, **kwargs) -> GeocodeResult:  # noqa: E501
-        """Find entities for given search query  # noqa: E501
 
-        Obtains coordinates and additional information (like surrounding regional structure) based on textual location query (addresses, streets, cities, ...). Rate limit is 100 requests per second per API key  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
+    @validate_call
+    def api_geocode_v1_geocode_get(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> GeocodeResult:
+        """Find entities for given search query
 
-        >>> thread = api.api_geocode_v1_geocode_get(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, async_req=True)
-        >>> result = thread.get()
-
-        :param query: Geographic entity name to resolve
-        :type query: str
-        :param lang: Preferred language for result entity names
-        :type lang: Language
-        :param limit: Maximum number of results (default 5, upper limit 15)
-        :type limit: int
-        :param type: Return selected entity types only
-        :type type: List[GeocodeEntityType]
-        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
-        :type locality: List[str]
-        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
-        :type prefer_b_box: List[float]
-        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
-        :type prefer_near: List[float]
-        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
-        :type prefer_near_precision: float
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _request_timeout: timeout setting for this request.
-               If one number provided, it will be total request
-               timeout. It can also be a pair (tuple) of
-               (connection, read) timeouts.
-        :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: GeocodeResult
-        """
-        kwargs['_return_http_data_only'] = True
-        if '_preload_content' in kwargs:
-            message = "Error! Please call the api_geocode_v1_geocode_get_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"  # noqa: E501
-            raise ValueError(message)
-        return self.api_geocode_v1_geocode_get_with_http_info(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, **kwargs)  # noqa: E501
-
-    @validate_arguments
-    def api_geocode_v1_geocode_get_with_http_info(self, query : Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None, lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, limit : Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None, type : Annotated[Optional[conlist(GeocodeEntityType)], Field(description="Return selected entity types only")] = None, locality : Annotated[Optional[conlist(constr(strict=True))], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None, prefer_b_box : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=4, min_items=4)], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None, prefer_near : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=2, min_items=2)], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None, prefer_near_precision : Annotated[Optional[Union[confloat(ge=0.0, strict=True), conint(ge=0.0, strict=True)]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None, **kwargs) -> ApiResponse:  # noqa: E501
-        """Find entities for given search query  # noqa: E501
-
-        Obtains coordinates and additional information (like surrounding regional structure) based on textual location query (addresses, streets, cities, ...). Rate limit is 100 requests per second per API key  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
-
-        >>> thread = api.api_geocode_v1_geocode_get_with_http_info(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, async_req=True)
-        >>> result = thread.get()
+        Obtains coordinates and additional information (like surrounding regional structure) based on textual location query (addresses, streets, cities, ...). Rate limit is 100 requests per second per API key
 
         :param query: Geographic entity name to resolve
         :type query: str
@@ -118,491 +95,1032 @@ class GeocodingApi:
         :type prefer_near: List[float]
         :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
         :type prefer_near_precision: float
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _preload_content: if False, the ApiResponse.data will
-                                 be set to none and raw_data will store the
-                                 HTTP response body without reading/decoding.
-                                 Default is True.
-        :type _preload_content: bool, optional
-        :param _return_http_data_only: response data instead of ApiResponse
-                                       object with status code, headers, etc
-        :type _return_http_data_only: bool, optional
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
         :param _request_auth: set to override the auth_settings for an a single
-                              request; this effectively ignores the authentication
-                              in the spec for a single request.
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
         :type _request_auth: dict, optional
-        :type _content_type: string, optional: force content-type for the request
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
         :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: tuple(GeocodeResult, status_code(int), headers(HTTPHeaderDict))
-        """
+        """ # noqa: E501
 
-        _params = locals()
-
-        _all_params = [
-            'query',
-            'lang',
-            'limit',
-            'type',
-            'locality',
-            'prefer_b_box',
-            'prefer_near',
-            'prefer_near_precision'
-        ]
-        _all_params.extend(
-            [
-                'async_req',
-                '_return_http_data_only',
-                '_preload_content',
-                '_request_timeout',
-                '_request_auth',
-                '_content_type',
-                '_headers'
-            ]
+        _param = self._api_geocode_v1_geocode_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
         )
 
-        # validate the arguments
-        for _key, _val in _params['kwargs'].items():
-            if _key not in _all_params:
-                raise ApiTypeError(
-                    "Got an unexpected keyword argument '%s'"
-                    " to method api_geocode_v1_geocode_get" % _key
-                )
-            _params[_key] = _val
-        del _params['kwargs']
-
-        _collection_formats = {}
-
-        # process the path parameters
-        _path_params = {}
-
-        # process the query parameters
-        _query_params = []
-        if _params.get('query') is not None:  # noqa: E501
-            _query_params.append(('query', _params['query']))
-
-        if _params.get('lang') is not None:  # noqa: E501
-            _query_params.append(('lang', _params['lang'].value))
-
-        if _params.get('limit') is not None:  # noqa: E501
-            _query_params.append(('limit', _params['limit']))
-
-        if _params.get('type') is not None:  # noqa: E501
-            _query_params.append(('type', _params['type']))
-            _collection_formats['type'] = 'multi'
-
-        if _params.get('locality') is not None:  # noqa: E501
-            _query_params.append(('locality', _params['locality']))
-            _collection_formats['locality'] = 'multi'
-
-        if _params.get('prefer_b_box') is not None:  # noqa: E501
-            _query_params.append(('preferBBox', _params['prefer_b_box']))
-            _collection_formats['preferBBox'] = 'multi'
-
-        if _params.get('prefer_near') is not None:  # noqa: E501
-            _query_params.append(('preferNear', _params['prefer_near']))
-            _collection_formats['preferNear'] = 'multi'
-
-        if _params.get('prefer_near_precision') is not None:  # noqa: E501
-            _query_params.append(('preferNearPrecision', _params['prefer_near_precision']))
-
-        # process the header parameters
-        _header_params = dict(_params.get('_headers', {}))
-        # process the form parameters
-        _form_params = []
-        _files = {}
-        # process the body parameter
-        _body_params = None
-        # set the HTTP header `Accept`
-        _header_params['Accept'] = self.api_client.select_header_accept(
-            ['application/json'])  # noqa: E501
-
-        # authentication setting
-        _auth_settings = ['headerApiKey', 'queryApiKey']  # noqa: E501
-
-        _response_types_map = {
+        _response_types_map: Dict[str, Optional[str]] = {
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-
-        return self.api_client.call_api(
-            '/v1/geocode', 'GET',
-            _path_params,
-            _query_params,
-            _header_params,
-            body=_body_params,
-            post_params=_form_params,
-            files=_files,
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
             response_types_map=_response_types_map,
-            auth_settings=_auth_settings,
-            async_req=_params.get('async_req'),
-            _return_http_data_only=_params.get('_return_http_data_only'),  # noqa: E501
-            _preload_content=_params.get('_preload_content', True),
-            _request_timeout=_params.get('_request_timeout'),
-            collection_formats=_collection_formats,
-            _request_auth=_params.get('_request_auth'))
+        ).data
 
-    @validate_arguments
-    def api_rgeocode_v1_rgeocode_get(self, lon : Annotated[Union[confloat(le=180.0, ge=-180.0, strict=True), conint(le=180.0, ge=-180.0, strict=True)], Field(..., description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")], lat : Annotated[Union[confloat(le=90.0, ge=-90.0, strict=True), conint(le=90.0, ge=-90.0, strict=True)], Field(..., description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")], lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, **kwargs) -> RgeocodeResult:  # noqa: E501
-        """Get regional entities for coordinates  # noqa: E501
 
-        Reverse geocode - get regional entities for given location coordinates. Rate limit is 200 requests per second per API key.  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
+    @validate_call
+    def api_geocode_v1_geocode_get_with_http_info(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[GeocodeResult]:
+        """Find entities for given search query
 
-        >>> thread = api.api_rgeocode_v1_rgeocode_get(lon, lat, lang, async_req=True)
-        >>> result = thread.get()
+        Obtains coordinates and additional information (like surrounding regional structure) based on textual location query (addresses, streets, cities, ...). Rate limit is 100 requests per second per API key
 
-        :param lon: Location longitude in degrees (decimal point is \".\"). Positive means east, negative west. (required)
-        :type lon: float
-        :param lat: Location latitude in degrees (decimal point is \".\"). Positive means north, negative south. (required)
-        :type lat: float
+        :param query: Geographic entity name to resolve
+        :type query: str
         :param lang: Preferred language for result entity names
         :type lang: Language
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _request_timeout: timeout setting for this request.
-               If one number provided, it will be total request
-               timeout. It can also be a pair (tuple) of
-               (connection, read) timeouts.
-        :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: RgeocodeResult
-        """
-        kwargs['_return_http_data_only'] = True
-        if '_preload_content' in kwargs:
-            message = "Error! Please call the api_rgeocode_v1_rgeocode_get_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"  # noqa: E501
-            raise ValueError(message)
-        return self.api_rgeocode_v1_rgeocode_get_with_http_info(lon, lat, lang, **kwargs)  # noqa: E501
-
-    @validate_arguments
-    def api_rgeocode_v1_rgeocode_get_with_http_info(self, lon : Annotated[Union[confloat(le=180.0, ge=-180.0, strict=True), conint(le=180.0, ge=-180.0, strict=True)], Field(..., description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")], lat : Annotated[Union[confloat(le=90.0, ge=-90.0, strict=True), conint(le=90.0, ge=-90.0, strict=True)], Field(..., description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")], lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, **kwargs) -> ApiResponse:  # noqa: E501
-        """Get regional entities for coordinates  # noqa: E501
-
-        Reverse geocode - get regional entities for given location coordinates. Rate limit is 200 requests per second per API key.  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
-
-        >>> thread = api.api_rgeocode_v1_rgeocode_get_with_http_info(lon, lat, lang, async_req=True)
-        >>> result = thread.get()
-
-        :param lon: Location longitude in degrees (decimal point is \".\"). Positive means east, negative west. (required)
-        :type lon: float
-        :param lat: Location latitude in degrees (decimal point is \".\"). Positive means north, negative south. (required)
-        :type lat: float
-        :param lang: Preferred language for result entity names
-        :type lang: Language
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _preload_content: if False, the ApiResponse.data will
-                                 be set to none and raw_data will store the
-                                 HTTP response body without reading/decoding.
-                                 Default is True.
-        :type _preload_content: bool, optional
-        :param _return_http_data_only: response data instead of ApiResponse
-                                       object with status code, headers, etc
-        :type _return_http_data_only: bool, optional
+        :param limit: Maximum number of results (default 5, upper limit 15)
+        :type limit: int
+        :param type: Return selected entity types only
+        :type type: List[GeocodeEntityType]
+        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
+        :type locality: List[str]
+        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
+        :type prefer_b_box: List[float]
+        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
+        :type prefer_near: List[float]
+        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
+        :type prefer_near_precision: float
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
         :param _request_auth: set to override the auth_settings for an a single
-                              request; this effectively ignores the authentication
-                              in the spec for a single request.
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
         :type _request_auth: dict, optional
-        :type _content_type: string, optional: force content-type for the request
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
         :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: tuple(RgeocodeResult, status_code(int), headers(HTTPHeaderDict))
-        """
+        """ # noqa: E501
 
-        _params = locals()
+        _param = self._api_geocode_v1_geocode_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
 
-        _all_params = [
-            'lon',
-            'lat',
-            'lang'
-        ]
-        _all_params.extend(
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "GeocodeResult",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def api_geocode_v1_geocode_get_without_preload_content(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """Find entities for given search query
+
+        Obtains coordinates and additional information (like surrounding regional structure) based on textual location query (addresses, streets, cities, ...). Rate limit is 100 requests per second per API key
+
+        :param query: Geographic entity name to resolve
+        :type query: str
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param limit: Maximum number of results (default 5, upper limit 15)
+        :type limit: int
+        :param type: Return selected entity types only
+        :type type: List[GeocodeEntityType]
+        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
+        :type locality: List[str]
+        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
+        :type prefer_b_box: List[float]
+        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
+        :type prefer_near: List[float]
+        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
+        :type prefer_near_precision: float
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_geocode_v1_geocode_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "GeocodeResult",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _api_geocode_v1_geocode_get_serialize(
+        self,
+        query,
+        lang,
+        limit,
+        type,
+        locality,
+        prefer_b_box,
+        prefer_near,
+        prefer_near_precision,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> Tuple:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+            'type': 'multi',
+            'locality': 'multi',
+            'preferBBox': 'multi',
+            'preferNear': 'multi',
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[str, str] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        # process the query parameters
+        if query is not None:
+            
+            _query_params.append(('query', query))
+            
+        if lang is not None:
+            
+            _query_params.append(('lang', lang.value))
+            
+        if limit is not None:
+            
+            _query_params.append(('limit', limit))
+            
+        if type is not None:
+            
+            _query_params.append(('type', type))
+            
+        if locality is not None:
+            
+            _query_params.append(('locality', locality))
+            
+        if prefer_b_box is not None:
+            
+            _query_params.append(('preferBBox', prefer_b_box))
+            
+        if prefer_near is not None:
+            
+            _query_params.append(('preferNear', prefer_near))
+            
+        if prefer_near_precision is not None:
+            
+            _query_params.append(('preferNearPrecision', prefer_near_precision))
+            
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        _header_params['Accept'] = self.api_client.select_header_accept(
             [
-                'async_req',
-                '_return_http_data_only',
-                '_preload_content',
-                '_request_timeout',
-                '_request_auth',
-                '_content_type',
-                '_headers'
+                'application/json'
             ]
         )
 
-        # validate the arguments
-        for _key, _val in _params['kwargs'].items():
-            if _key not in _all_params:
-                raise ApiTypeError(
-                    "Got an unexpected keyword argument '%s'"
-                    " to method api_rgeocode_v1_rgeocode_get" % _key
-                )
-            _params[_key] = _val
-        del _params['kwargs']
-
-        _collection_formats = {}
-
-        # process the path parameters
-        _path_params = {}
-
-        # process the query parameters
-        _query_params = []
-        if _params.get('lon') is not None:  # noqa: E501
-            _query_params.append(('lon', _params['lon']))
-
-        if _params.get('lat') is not None:  # noqa: E501
-            _query_params.append(('lat', _params['lat']))
-
-        if _params.get('lang') is not None:  # noqa: E501
-            _query_params.append(('lang', _params['lang'].value))
-
-        # process the header parameters
-        _header_params = dict(_params.get('_headers', {}))
-        # process the form parameters
-        _form_params = []
-        _files = {}
-        # process the body parameter
-        _body_params = None
-        # set the HTTP header `Accept`
-        _header_params['Accept'] = self.api_client.select_header_accept(
-            ['application/json'])  # noqa: E501
 
         # authentication setting
-        _auth_settings = ['headerApiKey', 'queryApiKey']  # noqa: E501
+        _auth_settings: List[str] = [
+            'headerApiKey', 
+            'queryApiKey'
+        ]
 
-        _response_types_map = {
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/geocode',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            auth_settings=_auth_settings,
+            collection_formats=_collection_formats,
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+
+
+
+    @validate_call
+    def api_rgeocode_v1_rgeocode_get(
+        self,
+        lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
+        lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RgeocodeResult:
+        """Get regional entities for coordinates
+
+        Reverse geocode - get regional entities for given location coordinates. Rate limit is 200 requests per second per API key.
+
+        :param lon: Location longitude in degrees (decimal point is \".\"). Positive means east, negative west. (required)
+        :type lon: float
+        :param lat: Location latitude in degrees (decimal point is \".\"). Positive means north, negative south. (required)
+        :type lat: float
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_rgeocode_v1_rgeocode_get_serialize(
+            lon=lon,
+            lat=lat,
+            lang=lang,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
             '200': "RgeocodeResult",
             '500': None,
             '422': "HTTPValidationError",
         }
-
-        return self.api_client.call_api(
-            '/v1/rgeocode', 'GET',
-            _path_params,
-            _query_params,
-            _header_params,
-            body=_body_params,
-            post_params=_form_params,
-            files=_files,
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
             response_types_map=_response_types_map,
-            auth_settings=_auth_settings,
-            async_req=_params.get('async_req'),
-            _return_http_data_only=_params.get('_return_http_data_only'),  # noqa: E501
-            _preload_content=_params.get('_preload_content', True),
-            _request_timeout=_params.get('_request_timeout'),
-            collection_formats=_collection_formats,
-            _request_auth=_params.get('_request_auth'))
+        ).data
 
-    @validate_arguments
-    def api_suggest_v1_suggest_get(self, query : Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None, lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, limit : Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None, type : Annotated[Optional[conlist(GeocodeEntityType)], Field(description="Return selected entity types only")] = None, locality : Annotated[Optional[conlist(constr(strict=True))], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None, prefer_b_box : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=4, min_items=4)], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None, prefer_near : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=2, min_items=2)], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None, prefer_near_precision : Annotated[Optional[Union[confloat(ge=0.0, strict=True), conint(ge=0.0, strict=True)]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None, **kwargs) -> GeocodeResult:  # noqa: E501
-        """Suggest entities while typing a query  # noqa: E501
 
-        Suggest works similarly to geocoding, but it accounts for incomplete queries, so it can be used to suggest matching entities while user is writing the location query. Rate limit is 100 requests per second per API key  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
+    @validate_call
+    def api_rgeocode_v1_rgeocode_get_with_http_info(
+        self,
+        lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
+        lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[RgeocodeResult]:
+        """Get regional entities for coordinates
 
-        >>> thread = api.api_suggest_v1_suggest_get(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, async_req=True)
-        >>> result = thread.get()
+        Reverse geocode - get regional entities for given location coordinates. Rate limit is 200 requests per second per API key.
 
-        :param query: Geographic entity name to resolve
-        :type query: str
+        :param lon: Location longitude in degrees (decimal point is \".\"). Positive means east, negative west. (required)
+        :type lon: float
+        :param lat: Location latitude in degrees (decimal point is \".\"). Positive means north, negative south. (required)
+        :type lat: float
         :param lang: Preferred language for result entity names
         :type lang: Language
-        :param limit: Maximum number of results (default 5, upper limit 15)
-        :type limit: int
-        :param type: Return selected entity types only
-        :type type: List[GeocodeEntityType]
-        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
-        :type locality: List[str]
-        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
-        :type prefer_b_box: List[float]
-        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
-        :type prefer_near: List[float]
-        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
-        :type prefer_near_precision: float
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _request_timeout: timeout setting for this request.
-               If one number provided, it will be total request
-               timeout. It can also be a pair (tuple) of
-               (connection, read) timeouts.
-        :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: GeocodeResult
-        """
-        kwargs['_return_http_data_only'] = True
-        if '_preload_content' in kwargs:
-            message = "Error! Please call the api_suggest_v1_suggest_get_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"  # noqa: E501
-            raise ValueError(message)
-        return self.api_suggest_v1_suggest_get_with_http_info(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, **kwargs)  # noqa: E501
-
-    @validate_arguments
-    def api_suggest_v1_suggest_get_with_http_info(self, query : Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None, lang : Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None, limit : Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None, type : Annotated[Optional[conlist(GeocodeEntityType)], Field(description="Return selected entity types only")] = None, locality : Annotated[Optional[conlist(constr(strict=True))], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None, prefer_b_box : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=4, min_items=4)], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None, prefer_near : Annotated[Optional[conlist(Union[StrictFloat, StrictInt], max_items=2, min_items=2)], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None, prefer_near_precision : Annotated[Optional[Union[confloat(ge=0.0, strict=True), conint(ge=0.0, strict=True)]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None, **kwargs) -> ApiResponse:  # noqa: E501
-        """Suggest entities while typing a query  # noqa: E501
-
-        Suggest works similarly to geocoding, but it accounts for incomplete queries, so it can be used to suggest matching entities while user is writing the location query. Rate limit is 100 requests per second per API key  # noqa: E501
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
-
-        >>> thread = api.api_suggest_v1_suggest_get_with_http_info(query, lang, limit, type, locality, prefer_b_box, prefer_near, prefer_near_precision, async_req=True)
-        >>> result = thread.get()
-
-        :param query: Geographic entity name to resolve
-        :type query: str
-        :param lang: Preferred language for result entity names
-        :type lang: Language
-        :param limit: Maximum number of results (default 5, upper limit 15)
-        :type limit: int
-        :param type: Return selected entity types only
-        :type type: List[GeocodeEntityType]
-        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
-        :type locality: List[str]
-        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
-        :type prefer_b_box: List[float]
-        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
-        :type prefer_near: List[float]
-        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
-        :type prefer_near_precision: float
-        :param async_req: Whether to execute the request asynchronously.
-        :type async_req: bool, optional
-        :param _preload_content: if False, the ApiResponse.data will
-                                 be set to none and raw_data will store the
-                                 HTTP response body without reading/decoding.
-                                 Default is True.
-        :type _preload_content: bool, optional
-        :param _return_http_data_only: response data instead of ApiResponse
-                                       object with status code, headers, etc
-        :type _return_http_data_only: bool, optional
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
                                  (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
         :param _request_auth: set to override the auth_settings for an a single
-                              request; this effectively ignores the authentication
-                              in the spec for a single request.
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
         :type _request_auth: dict, optional
-        :type _content_type: string, optional: force content-type for the request
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
         :return: Returns the result object.
-                 If the method is called asynchronously,
-                 returns the request thread.
-        :rtype: tuple(GeocodeResult, status_code(int), headers(HTTPHeaderDict))
-        """
+        """ # noqa: E501
 
-        _params = locals()
+        _param = self._api_rgeocode_v1_rgeocode_get_serialize(
+            lon=lon,
+            lat=lat,
+            lang=lang,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
 
-        _all_params = [
-            'query',
-            'lang',
-            'limit',
-            'type',
-            'locality',
-            'prefer_b_box',
-            'prefer_near',
-            'prefer_near_precision'
-        ]
-        _all_params.extend(
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "RgeocodeResult",
+            '500': None,
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def api_rgeocode_v1_rgeocode_get_without_preload_content(
+        self,
+        lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
+        lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """Get regional entities for coordinates
+
+        Reverse geocode - get regional entities for given location coordinates. Rate limit is 200 requests per second per API key.
+
+        :param lon: Location longitude in degrees (decimal point is \".\"). Positive means east, negative west. (required)
+        :type lon: float
+        :param lat: Location latitude in degrees (decimal point is \".\"). Positive means north, negative south. (required)
+        :type lat: float
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_rgeocode_v1_rgeocode_get_serialize(
+            lon=lon,
+            lat=lat,
+            lang=lang,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "RgeocodeResult",
+            '500': None,
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _api_rgeocode_v1_rgeocode_get_serialize(
+        self,
+        lon,
+        lat,
+        lang,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> Tuple:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[str, str] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        # process the query parameters
+        if lon is not None:
+            
+            _query_params.append(('lon', lon))
+            
+        if lat is not None:
+            
+            _query_params.append(('lat', lat))
+            
+        if lang is not None:
+            
+            _query_params.append(('lang', lang.value))
+            
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        _header_params['Accept'] = self.api_client.select_header_accept(
             [
-                'async_req',
-                '_return_http_data_only',
-                '_preload_content',
-                '_request_timeout',
-                '_request_auth',
-                '_content_type',
-                '_headers'
+                'application/json'
             ]
         )
 
-        # validate the arguments
-        for _key, _val in _params['kwargs'].items():
-            if _key not in _all_params:
-                raise ApiTypeError(
-                    "Got an unexpected keyword argument '%s'"
-                    " to method api_suggest_v1_suggest_get" % _key
-                )
-            _params[_key] = _val
-        del _params['kwargs']
-
-        _collection_formats = {}
-
-        # process the path parameters
-        _path_params = {}
-
-        # process the query parameters
-        _query_params = []
-        if _params.get('query') is not None:  # noqa: E501
-            _query_params.append(('query', _params['query']))
-
-        if _params.get('lang') is not None:  # noqa: E501
-            _query_params.append(('lang', _params['lang'].value))
-
-        if _params.get('limit') is not None:  # noqa: E501
-            _query_params.append(('limit', _params['limit']))
-
-        if _params.get('type') is not None:  # noqa: E501
-            _query_params.append(('type', _params['type']))
-            _collection_formats['type'] = 'multi'
-
-        if _params.get('locality') is not None:  # noqa: E501
-            _query_params.append(('locality', _params['locality']))
-            _collection_formats['locality'] = 'multi'
-
-        if _params.get('prefer_b_box') is not None:  # noqa: E501
-            _query_params.append(('preferBBox', _params['prefer_b_box']))
-            _collection_formats['preferBBox'] = 'multi'
-
-        if _params.get('prefer_near') is not None:  # noqa: E501
-            _query_params.append(('preferNear', _params['prefer_near']))
-            _collection_formats['preferNear'] = 'multi'
-
-        if _params.get('prefer_near_precision') is not None:  # noqa: E501
-            _query_params.append(('preferNearPrecision', _params['prefer_near_precision']))
-
-        # process the header parameters
-        _header_params = dict(_params.get('_headers', {}))
-        # process the form parameters
-        _form_params = []
-        _files = {}
-        # process the body parameter
-        _body_params = None
-        # set the HTTP header `Accept`
-        _header_params['Accept'] = self.api_client.select_header_accept(
-            ['application/json'])  # noqa: E501
 
         # authentication setting
-        _auth_settings = ['headerApiKey', 'queryApiKey']  # noqa: E501
+        _auth_settings: List[str] = [
+            'headerApiKey', 
+            'queryApiKey'
+        ]
 
-        _response_types_map = {
-            '200': "GeocodeResult",
-            '422': "HTTPValidationError",
-        }
-
-        return self.api_client.call_api(
-            '/v1/suggest', 'GET',
-            _path_params,
-            _query_params,
-            _header_params,
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/rgeocode',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
             body=_body_params,
             post_params=_form_params,
             files=_files,
-            response_types_map=_response_types_map,
             auth_settings=_auth_settings,
-            async_req=_params.get('async_req'),
-            _return_http_data_only=_params.get('_return_http_data_only'),  # noqa: E501
-            _preload_content=_params.get('_preload_content', True),
-            _request_timeout=_params.get('_request_timeout'),
             collection_formats=_collection_formats,
-            _request_auth=_params.get('_request_auth'))
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+
+
+
+    @validate_call
+    def api_suggest_v1_suggest_get(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> GeocodeResult:
+        """Suggest entities while typing a query
+
+        Suggest works similarly to geocoding, but it accounts for incomplete queries, so it can be used to suggest matching entities while user is writing the location query. Rate limit is 100 requests per second per API key
+
+        :param query: Geographic entity name to resolve
+        :type query: str
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param limit: Maximum number of results (default 5, upper limit 15)
+        :type limit: int
+        :param type: Return selected entity types only
+        :type type: List[GeocodeEntityType]
+        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
+        :type locality: List[str]
+        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
+        :type prefer_b_box: List[float]
+        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
+        :type prefer_near: List[float]
+        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
+        :type prefer_near_precision: float
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_suggest_v1_suggest_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "GeocodeResult",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        ).data
+
+
+    @validate_call
+    def api_suggest_v1_suggest_get_with_http_info(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[GeocodeResult]:
+        """Suggest entities while typing a query
+
+        Suggest works similarly to geocoding, but it accounts for incomplete queries, so it can be used to suggest matching entities while user is writing the location query. Rate limit is 100 requests per second per API key
+
+        :param query: Geographic entity name to resolve
+        :type query: str
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param limit: Maximum number of results (default 5, upper limit 15)
+        :type limit: int
+        :param type: Return selected entity types only
+        :type type: List[GeocodeEntityType]
+        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
+        :type locality: List[str]
+        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
+        :type prefer_b_box: List[float]
+        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
+        :type prefer_near: List[float]
+        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
+        :type prefer_near_precision: float
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_suggest_v1_suggest_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "GeocodeResult",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def api_suggest_v1_suggest_get_without_preload_content(
+        self,
+        query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
+        lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
+        limit: Annotated[Optional[StrictInt], Field(description="Maximum number of results (default 5, upper limit 15)")] = None,
+        type: Annotated[Optional[List[GeocodeEntityType]], Field(description="Return selected entity types only")] = None,
+        locality: Annotated[Optional[List[Annotated[str, Field(strict=True)]]], Field(description="Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. ")] = None,
+        prefer_b_box: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=4, max_length=4)]], Field(description="Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`")] = None,
+        prefer_near: Annotated[Optional[Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=2, max_length=2)]], Field(description="Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`")] = None,
+        prefer_near_precision: Annotated[Optional[Union[Annotated[float, Field(strict=True, ge=0.0)], Annotated[int, Field(strict=True, ge=0)]]], Field(description="Precision of parameter `near` in meters (use to prefer results from a circle)")] = None,
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """Suggest entities while typing a query
+
+        Suggest works similarly to geocoding, but it accounts for incomplete queries, so it can be used to suggest matching entities while user is writing the location query. Rate limit is 100 requests per second per API key
+
+        :param query: Geographic entity name to resolve
+        :type query: str
+        :param lang: Preferred language for result entity names
+        :type lang: Language
+        :param limit: Maximum number of results (default 5, upper limit 15)
+        :type limit: int
+        :param type: Return selected entity types only
+        :type type: List[GeocodeEntityType]
+        :param locality: Return results only from these localities. It may be in form of comma-separated locality names (e. g. `Praha 5`, `Lhota u Kolína`), country codes (cz, gb, us, ...) or rectangles `BOX({minLon},{minLat},{maxLon},{maxLat})` or a mix of them. Location names (except country codes) are internally converted to bounding boxes, so using box arguments is preferred to avoid ambiguities - resolved boxes for locality names are returned in response (or \"Not found!\" for unknown localities) to help with this. On the other hand, country codes are preferred over their bounding boxes, because they allow precise filtering and avoid enge-cases near the date-line. 
+        :type locality: List[str]
+        :param prefer_b_box: Prefer results from this box (not a filter). Conflicts with `near`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{minLon},{minLat},{maxLon},{maxLat}`
+        :type prefer_b_box: List[float]
+        :param prefer_near: Prefer results near this position (not a filter). Conflicts with `box`. If neither `box` nor `near` is specified, defaults to Czech Republic. Format `{lon}, {lat}`
+        :type prefer_near: List[float]
+        :param prefer_near_precision: Precision of parameter `near` in meters (use to prefer results from a circle)
+        :type prefer_near_precision: float
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._api_suggest_v1_suggest_get_serialize(
+            query=query,
+            lang=lang,
+            limit=limit,
+            type=type,
+            locality=locality,
+            prefer_b_box=prefer_b_box,
+            prefer_near=prefer_near,
+            prefer_near_precision=prefer_near_precision,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "GeocodeResult",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _api_suggest_v1_suggest_get_serialize(
+        self,
+        query,
+        lang,
+        limit,
+        type,
+        locality,
+        prefer_b_box,
+        prefer_near,
+        prefer_near_precision,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> Tuple:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+            'type': 'multi',
+            'locality': 'multi',
+            'preferBBox': 'multi',
+            'preferNear': 'multi',
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[str, str] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        # process the query parameters
+        if query is not None:
+            
+            _query_params.append(('query', query))
+            
+        if lang is not None:
+            
+            _query_params.append(('lang', lang.value))
+            
+        if limit is not None:
+            
+            _query_params.append(('limit', limit))
+            
+        if type is not None:
+            
+            _query_params.append(('type', type))
+            
+        if locality is not None:
+            
+            _query_params.append(('locality', locality))
+            
+        if prefer_b_box is not None:
+            
+            _query_params.append(('preferBBox', prefer_b_box))
+            
+        if prefer_near is not None:
+            
+            _query_params.append(('preferNear', prefer_near))
+            
+        if prefer_near_precision is not None:
+            
+            _query_params.append(('preferNearPrecision', prefer_near_precision))
+            
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        _header_params['Accept'] = self.api_client.select_header_accept(
+            [
+                'application/json'
+            ]
+        )
+
+
+        # authentication setting
+        _auth_settings: List[str] = [
+            'headerApiKey', 
+            'queryApiKey'
+        ]
+
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/suggest',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            auth_settings=_auth_settings,
+            collection_formats=_collection_formats,
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+

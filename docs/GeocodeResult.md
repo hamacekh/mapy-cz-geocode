@@ -3,6 +3,7 @@
 Ordered list of matching geographical entities
 
 ## Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **items** | [**List[GeocodeResultEntity]**](GeocodeResultEntity.md) |  | 

@@ -2,6 +2,7 @@
 
 
 ## Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **loc** | [**List[ValidationErrorLocInner]**](ValidationErrorLocInner.md) |  | 

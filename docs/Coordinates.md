@@ -2,6 +2,7 @@
 
 
 ## Properties
+
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **lon** | **float** | Location longitude in degrees (decimal point is \&quot;.\&quot;). Positive means east, negative west. | 

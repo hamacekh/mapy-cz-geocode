@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0e1e616a-c5c5-4956-b2b8-f30fe96b75bc" name="Changes" comment="Initial commit">
+      <change afterPath="$PROJECT_DIR$/.github/workflows/python.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitlab-ci.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/mapyczgeocode.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.openapi-generator-ignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.openapi-generator/FILES" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.openapi-generator/VERSION" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.travis.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/Coordinates.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/GeocodeEntityType.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/GeocodeResult.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/GeocodeResultEntity.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/GeocodingApi.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/HTTPValidationError.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/Language.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/RegionalEntity.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/RgeoEntityType.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/RgeocodeResult.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/RgeocodeResultEntity.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/ValidationError.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/ValidationErrorLocInner.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/git_push.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/api/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/api/geocoding_api.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/api_client.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/api_response.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/configuration.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/exceptions.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/coordinates.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/geocode_entity_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/geocode_result.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/geocode_result_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/http_validation_error.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/language.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/regional_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/rgeo_entity_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/rgeocode_result.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/rgeocode_result_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/validation_error.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/models/validation_error_loc_inner.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/py.typed" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mapy-cz-geocode/rest.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/setup.cfg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test-requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_coordinates.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_geocode_entity_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_geocode_result.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_geocode_result_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_geocoding_api.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_http_validation_error.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_language.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_regional_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_rgeo_entity_type.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_rgeocode_result.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_rgeocode_result_entity.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_validation_error.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/test_validation_error_loc_inner.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tox.ini" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="2a8NePfusIJ49oTJUUEUwH3NjdQ" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "/Users/janhamacek/PersonalProjects/mapyczgeocode",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.lookFeel",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-50da183f06c8-2887949eec09-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-233.13135.95" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0e1e616a-c5c5-4956-b2b8-f30fe96b75bc" name="Changes" comment="" />
+      <created>1703696341196</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1703696341196</updated>
+      <workItem from="1703696342252" duration="531000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Initial commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+  </component>
+</project>

@@ -80,7 +80,7 @@ configuration.api_key['queryApiKey'] = os.environ["API_KEY"]
 
 
 # Enter a context with an instance of the API client
-with mapy_cz_geocode.ApiClient(configuration) as api_client:
+async with mapy_cz_geocode.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = mapy_cz_geocode.GeocodingApi(api_client)
     query = '' # str | Geographic entity name to resolve (optional) (default to '')
@@ -94,7 +94,7 @@ with mapy_cz_geocode.ApiClient(configuration) as api_client:
 
     try:
         # Find entities for given search query
-        api_response = api_instance.api_geocode_v1_geocode_get(query=query, lang=lang, limit=limit, type=type, locality=locality, prefer_b_box=prefer_b_box, prefer_near=prefer_near, prefer_near_precision=prefer_near_precision)
+        api_response = await api_instance.api_geocode_v1_geocode_get(query=query, lang=lang, limit=limit, type=type, locality=locality, prefer_b_box=prefer_b_box, prefer_near=prefer_near, prefer_near_precision=prefer_near_precision)
         print("The response of GeocodingApi->api_geocode_v1_geocode_get:\n")
         pprint(api_response)
     except ApiException as e:

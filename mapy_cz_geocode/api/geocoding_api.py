@@ -52,7 +52,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_geocode_v1_geocode_get(
+    async def api_geocode_v1_geocode_get(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -136,11 +136,11 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -148,7 +148,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_geocode_v1_geocode_get_with_http_info(
+    async def api_geocode_v1_geocode_get_with_http_info(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -232,11 +232,11 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -244,7 +244,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_geocode_v1_geocode_get_without_preload_content(
+    async def api_geocode_v1_geocode_get_without_preload_content(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -328,7 +328,7 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -439,7 +439,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_rgeocode_v1_rgeocode_get(
+    async def api_rgeocode_v1_rgeocode_get(
         self,
         lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
         lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
@@ -504,11 +504,11 @@ class GeocodingApi:
             '500': None,
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -516,7 +516,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_rgeocode_v1_rgeocode_get_with_http_info(
+    async def api_rgeocode_v1_rgeocode_get_with_http_info(
         self,
         lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
         lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
@@ -581,11 +581,11 @@ class GeocodingApi:
             '500': None,
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -593,7 +593,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_rgeocode_v1_rgeocode_get_without_preload_content(
+    async def api_rgeocode_v1_rgeocode_get_without_preload_content(
         self,
         lon: Annotated[Union[Annotated[float, Field(le=180.0, strict=True, ge=-180.0)], Annotated[int, Field(le=180, strict=True, ge=-180)]], Field(description="Location longitude in degrees (decimal point is \".\"). Positive means east, negative west.")],
         lat: Annotated[Union[Annotated[float, Field(le=90.0, strict=True, ge=-90.0)], Annotated[int, Field(le=90, strict=True, ge=-90)]], Field(description="Location latitude in degrees (decimal point is \".\"). Positive means north, negative south.")],
@@ -658,7 +658,7 @@ class GeocodingApi:
             '500': None,
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
@@ -740,7 +740,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_suggest_v1_suggest_get(
+    async def api_suggest_v1_suggest_get(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -824,11 +824,11 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -836,7 +836,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_suggest_v1_suggest_get_with_http_info(
+    async def api_suggest_v1_suggest_get_with_http_info(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -920,11 +920,11 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
-        response_data.read()
+        await response_data.read()
         return self.api_client.response_deserialize(
             response_data=response_data,
             response_types_map=_response_types_map,
@@ -932,7 +932,7 @@ class GeocodingApi:
 
 
     @validate_call
-    def api_suggest_v1_suggest_get_without_preload_content(
+    async def api_suggest_v1_suggest_get_without_preload_content(
         self,
         query: Annotated[Optional[StrictStr], Field(description="Geographic entity name to resolve")] = None,
         lang: Annotated[Optional[Any], Field(description="Preferred language for result entity names")] = None,
@@ -1016,7 +1016,7 @@ class GeocodingApi:
             '200': "GeocodeResult",
             '422': "HTTPValidationError",
         }
-        response_data = self.api_client.call_api(
+        response_data = await self.api_client.call_api(
             *_param,
             _request_timeout=_request_timeout
         )
